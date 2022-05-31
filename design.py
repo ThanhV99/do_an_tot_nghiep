@@ -14,7 +14,6 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 
 import cv2
 from src.model import Model
-from src.detect_size import phan_loai_to_nho
 
 
 class Ui_MainWindow(object):
@@ -53,7 +52,7 @@ class Ui_MainWindow(object):
         self.label_logo.setScaledContents(True)
         self.label_logo.setObjectName("label_logo")
         self.gridLayout_11.addWidget(self.label_logo, 0, 0, 1, 1)
-        self.gridLayout_10 = QtWidgets.QGridLayout(self.frame)
+        self.gridLayout_10 = QtWidgets.QGridLayout()
         self.gridLayout_10.setObjectName("gridLayout_10")
         self.label_title1 = QtWidgets.QLabel(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
@@ -260,60 +259,6 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-        self.thread = VideoThread()
-        # connect its signal to the update_image slot
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        # start the thread
-        self.thread.start()
-        # nut an chup man hinh
-        self.pushButton.clicked.connect(self.capture_image)
-        self.red_apples = 0
-        self.green_apples = 0
-        self.rotten_apples = 0
-
-    # chup man hinh
-    def capture_image(self):
-        # xu ly
-        img = self.thread.img
-        detections = model.pre_process(img)
-        result_img, red_apples, green_apples, rotten_apples = model.post_process(img.copy(), detections)
-        # so luong
-        self.red_apples += red_apples
-        self.green_apples += green_apples
-        self.rotten_apples += rotten_apples
-        self.update_text_result()
-        # detect kich thuoc
-
-        # ve len man hinh 2
-        qt_img = self.convert_cv_qt(result_img)
-        self.label_result.setPixmap(qt_img)
-
-    # update ket qua
-    def update_text_result(self):
-        self.label_count1.setText(str(self.red_apples))
-        self.label_count3.setText(str(self.green_apples))
-        self.label_count5.setText(str(self.rotten_apples))
-
-    def closeEvent(self, event):
-        self.thread.stop()
-        event.accept()
-
-        # @pyqtSlot(np.ndarray)
-    def update_image(self, cv_img):
-        """Updates the image_label with a new opencv image"""
-        qt_img = self.convert_cv_qt(cv_img)
-        self.label_camera.setPixmap(qt_img)
-
-    def convert_cv_qt(self, cv_img):
-        w_label, h_label = self.label_camera.width(), self.label_camera.height()
-        """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(w_label, h_label, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
-
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
@@ -339,36 +284,8 @@ class Ui_MainWindow(object):
         self.groupBox_cam.setTitle(_translate("MainWindow", "Camera"))
 
 
-class VideoThread(QThread):
-    change_pixmap_signal = pyqtSignal(np.ndarray)
-
-    def __init__(self):
-        super().__init__()
-        self._run_flag = True
-
-    def run(self):
-        # capture from web cam
-        cap = cv2.VideoCapture(0)
-        while self._run_flag:
-            ret, cv_img = cap.read()
-            self.img = cv_img
-            if ret:
-                self.change_pixmap_signal.emit(cv_img)
-        # shut down capture system
-        cap.release()
-
-    def stop(self):
-        """Sets run flag to False and waits for thread to finish"""
-        self._run_flag = False
-        self.wait()
-
-
 if __name__ == "__main__":
     import sys
-    # load model
-    print("start model")
-    model = Model("weights/last.onnx")
-
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()

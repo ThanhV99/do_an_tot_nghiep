@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 
 import cv2
 from src.model import Model
+from src.detect_size import phan_loai_to_nho
 
 
 class Ui_MainWindow(object):

@@ -8,7 +8,7 @@ import numpy as np
 KERNEL = np.ones((5, 5))
 
 def phan_loai_to_nho(input_image):
-    if input_image:
+    if input_image is None:
         return input_image
 
     blur = cv2.GaussianBlur(input_image, (5, 5), 0)

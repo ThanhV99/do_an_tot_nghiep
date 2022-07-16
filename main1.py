@@ -276,7 +276,7 @@ class Ui_MainWindow(object):
         # xu ly
         img = self.thread.img
         detections = model.pre_process(img)
-        result_img, red_apples, green_apples, rotten_apples = model.post_process(img.copy(), detections)
+        result_img, red_apples, green_apples, rotten_apples, kich_thuoc = model.post_process(img.copy(), detections)
         # so luong
         self.red_apples += red_apples
         self.green_apples += green_apples
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     import sys
     # load model
     print("start model")
-    model = Model("weights/last.onnx")
+    model = Model("weights/best.onnx")
 
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()

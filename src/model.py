@@ -69,6 +69,7 @@ class Model:
         num_red_apple = 0
         num_green_apple = 0
         num_rotten_apple = 0
+        kich_thuoc = None
         for i in indices:
             box = boxes[i]
             left = box[0]
@@ -92,12 +93,15 @@ class Model:
             # count apple
             if self.classes[class_ids[i]] == 'green apple':
                 num_green_apple += 1
+                kich_thuoc = self.tinh_kich_thuoc(width, height)
             elif self.classes[class_ids[i]] == 'red apple':
                 num_red_apple += 1
+                kich_thuoc = self.tinh_kich_thuoc(width, height)
             elif self.classes[class_ids[i]] == 'rotten apple':
                 num_rotten_apple += 1
+                kich_thuoc = None
 
-        return image, num_red_apple, num_green_apple, num_rotten_apple
+        return image, num_red_apple, num_green_apple, num_rotten_apple, kich_thuoc
 
     def draw_label(self, im, label, x, y):
         """Draw text onto image at location."""
@@ -109,3 +113,6 @@ class Model:
         # Display text inside the rectangle.
         cv2.putText(im, label, (x, y + dim[1]), cv2.FONT_HERSHEY_SIMPLEX, self.lw / 3, self.YELLOW, thickness=self.tf,
                     lineType=cv2.LINE_AA)
+
+    def tinh_kich_thuoc(self, box_width, box_height):
+        return box_width*box_height

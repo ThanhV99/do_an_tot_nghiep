@@ -16,6 +16,10 @@ import cv2
 from src.model import Model
 from src.detect_size import phan_loai_to_nho
 
+import serial
+
+Arduino = serial.Serial('COM4',9600)
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -266,10 +270,13 @@ class Ui_MainWindow(object):
         # start the thread
         self.thread.start()
         # nut an chup man hinh
-        self.pushButton.clicked.connect(self.capture_image)
+        self.pushButton.clicked.connect(self.start_machine)
+        self.pushButton_2.clicked.connect(self.stop_machine)
+        self.pushButton_3.clicked.connect(self.reset_machine)
         self.red_apples = 0
         self.green_apples = 0
         self.rotten_apples = 0
+        self.xu_li_tin_hieu_arduino()
 
     # chup man hinh
     def capture_image(self):
@@ -287,6 +294,28 @@ class Ui_MainWindow(object):
         # ve len man hinh 2
         qt_img = self.convert_cv_qt(result_img)
         self.label_result.setPixmap(qt_img)
+
+    def start_machine(self):
+        self.is_capture = True
+        Arduino.write("start".encode())
+
+    def stop_machine(self):
+        Arduino.write("stop".encode())
+
+    def reset_machine(self):
+        self.red_apples = 0
+        self.green_apples = 0
+        self.rotten_apples = 0
+        Arduino.write("stop".encode())
+
+    def xu_li_tin_hieu_arduino(self):
+        if Arduino.inWaiting() > 0:
+            myData = Arduino.readline()
+            if int(myData) == 1 and self.is_capture: # co tin hieu cam biet chup man hinh
+                self.is_capture = False
+                self.capture_image()
+            if int(myData) == 0 and not self.is_capture: # nhan biet qua da den vi tri cuoi
+                self.is_capture = True
 
     # update ket qua
     def update_text_result(self):
@@ -366,7 +395,6 @@ class VideoThread(QThread):
 if __name__ == "__main__":
     import sys
     # load model
-    print("start model")
     model = Model("weights/best.onnx")
 
     app = QtWidgets.QApplication(sys.argv)

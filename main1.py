@@ -284,6 +284,12 @@ class Ui_MainWindow(object):
         img = self.thread.img
         detections = model.pre_process(img)
         result_img, red_apples, green_apples, rotten_apples, kich_thuoc = model.post_process(img.copy(), detections)
+        if red_apples != 0:
+            self.dongco_doto = True
+        elif green_apples != 0:
+            self.dongco_xanhto = True
+        elif rotten_apples != 0:
+            self.dongco_taohong = True
         # so luong
         self.red_apples += red_apples
         self.green_apples += green_apples
@@ -296,7 +302,7 @@ class Ui_MainWindow(object):
         self.label_result.setPixmap(qt_img)
 
     def start_machine(self):
-        self.is_capture = True
+        self.start_program = True
         Arduino.write("start".encode())
 
     def stop_machine(self):
@@ -311,11 +317,21 @@ class Ui_MainWindow(object):
     def xu_li_tin_hieu_arduino(self):
         if Arduino.inWaiting() > 0:
             myData = Arduino.readline()
-            if int(myData) == 1 and self.is_capture: # co tin hieu cam biet chup man hinh
-                self.is_capture = False
+            if int(myData) == 1 and self.start_program:  # tín hiệu cảm biến có quả ở vị trí bắt đầu
+                self.start_program = False
                 self.capture_image()
-            if int(myData) == 0 and not self.is_capture: # nhan biet qua da den vi tri cuoi
-                self.is_capture = True
+            if int(myData) == 0 and not self.start_program:  # tín hiệu arduino gửi lên nhận biết kết thúc 1 quá trình
+                self.start_program = True
+
+        if self.dongco_doto:  # gui tin hieu tao do to
+            Arduino.write("1".encode())
+            self.dongco_doto = False
+        elif self.dongco_xanhto:  # gui tin hieu tao xanh to
+            Arduino.write("2".encode())
+            self.dongco_xanhto = False
+        elif self.dongco_taohong:  # gui tin hieu tao hong
+            Arduino.write("3".encode())
+            self.dongco_taohong = False
 
     # update ket qua
     def update_text_result(self):

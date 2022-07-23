@@ -16,9 +16,10 @@ import cv2
 from src.model import Model
 from src.detect_size import phan_loai_to_nho
 
-import serial
-
-Arduino = serial.Serial('COM4',9600)
+import time
+# import serial
+#
+# Arduino = serial.Serial('COM4',9600)
 
 
 class Ui_MainWindow(object):
@@ -264,11 +265,12 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-        self.thread = VideoThread()
+        self.thread = {}
+        self.thread[1] = VideoThread()
         # connect its signal to the update_image slot
-        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread[1].change_pixmap_signal.connect(self.update_image)
         # start the thread
-        self.thread.start()
+        self.thread[1].start()
         # nut an chup man hinh
         self.pushButton.clicked.connect(self.start_machine)
         self.pushButton_2.clicked.connect(self.stop_machine)
@@ -276,7 +278,14 @@ class Ui_MainWindow(object):
         self.red_apples = 0
         self.green_apples = 0
         self.rotten_apples = 0
-        self.xu_li_tin_hieu_arduino()
+        # self.xu_li_tin_hieu_arduino()
+        # self.test()
+
+    # def test(self):
+    #     self.thread[2] = ThreadClass(index=1)
+    #     self.thread[2].start()
+    #     x = self.thread[2].signal
+    #     print(x)
 
     # chup man hinh
     def capture_image(self):
@@ -304,6 +313,7 @@ class Ui_MainWindow(object):
     def start_machine(self):
         self.start_program = True
         Arduino.write("start".encode())
+        self.xu_li_tin_hieu_arduino()
 
     def stop_machine(self):
         Arduino.write("stop".encode())
@@ -315,13 +325,14 @@ class Ui_MainWindow(object):
         Arduino.write("stop".encode())
 
     def xu_li_tin_hieu_arduino(self):
-        if Arduino.inWaiting() > 0:
-            myData = Arduino.readline()
-            if int(myData) == 1 and self.start_program:  # tín hiệu cảm biến có quả ở vị trí bắt đầu
-                self.start_program = False
-                self.capture_image()
-            if int(myData) == 0 and not self.start_program:  # tín hiệu arduino gửi lên nhận biết kết thúc 1 quá trình
-                self.start_program = True
+        self.thread[2] = ThreadClass(index=1)
+        self.thread[2].start()
+        myData = self.thread[2].signal
+        if myData == 1 and self.start_program:  # tín hiệu cảm biến có quả ở vị trí bắt đầu
+            self.start_program = False
+            self.capture_image()
+        elif myData == 2 and not self.start_program:  # tín hiệu arduino gửi lên nhận biết kết thúc 1 quá trình
+            self.start_program = True
 
         if self.dongco_doto:  # gui tin hieu tao do to
             Arduino.write("1".encode())
@@ -407,6 +418,35 @@ class VideoThread(QThread):
         self._run_flag = False
         self.wait()
 
+
+class ThreadClass(QThread):
+    signal = pyqtSignal(int)
+
+    def __init__(self, index=0):
+        super().__init__()
+        self.index = index
+
+    def run(self):
+        print('Starting thread...', self.index)
+        myData = 0
+        while True:
+            if Arduino.inWaiting() > 0:
+                myData = Arduino.readline()
+                time.sleep(1)
+            self.signal.emit(int(myData))
+        # print('Starting thread...', self.index)
+        # counter = 0
+        # while True:
+        #     counter += 1
+        #     print(counter)
+        #     time.sleep(1)
+        #     if counter == 5:
+        #         counter = 0
+        #     self.signal.emit(counter)
+
+    def stop(self):
+        print('Stopping thread...', self.index)
+        self.terminate()
 
 if __name__ == "__main__":
     import sys

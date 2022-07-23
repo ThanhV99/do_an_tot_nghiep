@@ -17,9 +17,9 @@ from src.model import Model
 from src.detect_size import phan_loai_to_nho
 
 import time
-# import serial
-#
-# Arduino = serial.Serial('COM4',9600)
+import serial
+
+Arduino = serial.Serial('COM4', 9600)
 
 
 class Ui_MainWindow(object):
@@ -121,6 +121,7 @@ class Ui_MainWindow(object):
         self.pushButton.setObjectName("pushButton")
         self.gridLayout_3.addWidget(self.pushButton, 0, 0, 1, 1)
         self.pushButton_2 = QtWidgets.QPushButton(self.groupBox_control)
+        self.pushButton_2.setEnabled(False)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.pushButton_2.setFont(font)
@@ -144,7 +145,7 @@ class Ui_MainWindow(object):
         font.setPointSize(16)
         self.groupBox_text_result.setFont(font)
         self.groupBox_text_result.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.groupBox_text_result.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.groupBox_text_result.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         self.groupBox_text_result.setFlat(False)
         self.groupBox_text_result.setCheckable(False)
         self.groupBox_text_result.setObjectName("groupBox_text_result")
@@ -290,8 +291,11 @@ class Ui_MainWindow(object):
     # chup man hinh
     def capture_image(self):
         # xu ly
-        img = self.thread.img
+        img = self.thread[1].img
         detections = model.pre_process(img)
+        self.dongco_doto = False
+        self.dongco_xanhto = False
+        self.dongco_taohong = False
         result_img, red_apples, green_apples, rotten_apples, kich_thuoc = model.post_process(img.copy(), detections)
         if red_apples != 0:
             self.dongco_doto = True
@@ -299,6 +303,7 @@ class Ui_MainWindow(object):
             self.dongco_xanhto = True
         elif rotten_apples != 0:
             self.dongco_taohong = True
+        self.truyenketquaxuly()
         # so luong
         self.red_apples += red_apples
         self.green_apples += green_apples
@@ -312,11 +317,15 @@ class Ui_MainWindow(object):
 
     def start_machine(self):
         self.start_program = True
+        self.pushButton.setEnabled(False)
+        self.pushButton_2.setEnabled(True)
         Arduino.write("start".encode())
         self.xu_li_tin_hieu_arduino()
 
     def stop_machine(self):
         Arduino.write("stop".encode())
+        self.pushButton_2.setEnabled(False)
+        self.pushButton.setEnabled(True)
 
     def reset_machine(self):
         self.red_apples = 0
@@ -327,22 +336,26 @@ class Ui_MainWindow(object):
     def xu_li_tin_hieu_arduino(self):
         self.thread[2] = ThreadClass(index=1)
         self.thread[2].start()
-        myData = self.thread[2].signal
-        if myData == 1 and self.start_program:  # tín hiệu cảm biến có quả ở vị trí bắt đầu
-            self.start_program = False
-            self.capture_image()
-        elif myData == 2 and not self.start_program:  # tín hiệu arduino gửi lên nhận biết kết thúc 1 quá trình
-            self.start_program = True
+        self.thread[2].signal.connect(self.kiemtra_tinhieu)
 
+    def truyenketquaxuly(self):
         if self.dongco_doto:  # gui tin hieu tao do to
-            Arduino.write("1".encode())
+            Arduino.write("taodoto".encode())
             self.dongco_doto = False
         elif self.dongco_xanhto:  # gui tin hieu tao xanh to
-            Arduino.write("2".encode())
+            Arduino.write("taoxanhto".encode())
             self.dongco_xanhto = False
         elif self.dongco_taohong:  # gui tin hieu tao hong
-            Arduino.write("3".encode())
+            Arduino.write("taohong".encode())
             self.dongco_taohong = False
+
+    def kiemtra_tinhieu(self, data):
+        if data == 1 and self.start_program:  # tín hiệu cảm biến có quả ở vị trí bắt đầu
+            self.start_program = False
+            self.capture_image()
+        elif data == 2 and not self.start_program:  # tín hiệu arduino gửi lên nhận biết kết thúc 1 quá trình
+            self.start_program = True
+            Arduino.write("start".encode())
 
     # update ket qua
     def update_text_result(self):
@@ -351,10 +364,11 @@ class Ui_MainWindow(object):
         self.label_count5.setText(str(self.rotten_apples))
 
     def closeEvent(self, event):
-        self.thread.stop()
+        self.thread[1].stop()
         event.accept()
 
         # @pyqtSlot(np.ndarray)
+
     def update_image(self, cv_img):
         """Updates the image_label with a new opencv image"""
         qt_img = self.convert_cv_qt(cv_img)
@@ -428,28 +442,29 @@ class ThreadClass(QThread):
 
     def run(self):
         print('Starting thread...', self.index)
-        myData = 0
+        x = 0
         while True:
+            # if Arduino.inWaiting() > 0:
+            #     myData = Arduino.readline().decode()
+            #     time.sleep(1)
+            #     x = int(myData[0])
+            # self.signal.emit(x)
             if Arduino.inWaiting() > 0:
-                myData = Arduino.readline()
+                myData = Arduino.readline().decode()
+                myData.split("\\", 2)
+                print(myData)
                 time.sleep(1)
-            self.signal.emit(int(myData))
-        # print('Starting thread...', self.index)
-        # counter = 0
-        # while True:
-        #     counter += 1
-        #     print(counter)
-        #     time.sleep(1)
-        #     if counter == 5:
-        #         counter = 0
-        #     self.signal.emit(counter)
+                x = int(myData[0])
+            self.signal.emit(x)
 
     def stop(self):
         print('Stopping thread...', self.index)
         self.terminate()
 
+
 if __name__ == "__main__":
     import sys
+
     # load model
     model = Model("weights/best.onnx")
 

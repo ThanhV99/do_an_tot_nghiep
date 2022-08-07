@@ -112,7 +112,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Đồ án tốt nghiệp</string>
+              <string>Đồ án tốt nghiệp kỹ sư Cơ điện tử</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -127,7 +127,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Đề tài: </string>
+              <string>Đề tài: Băng tải phân loại quả táo ứng dụng mạng YOLO</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>

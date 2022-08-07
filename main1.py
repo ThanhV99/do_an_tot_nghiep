@@ -128,6 +128,7 @@ class Ui_MainWindow(object):
         self.pushButton_2.setObjectName("pushButton_2")
         self.gridLayout_3.addWidget(self.pushButton_2, 1, 0, 1, 1)
         self.pushButton_3 = QtWidgets.QPushButton(self.groupBox_control)
+        self.pushButton_3.setEnabled(False)
         font = QtGui.QFont()
         font.setPointSize(8)
         self.pushButton_3.setFont(font)
@@ -276,41 +277,50 @@ class Ui_MainWindow(object):
         self.pushButton.clicked.connect(self.start_machine)
         self.pushButton_2.clicked.connect(self.stop_machine)
         self.pushButton_3.clicked.connect(self.reset_machine)
-        self.red_apples = 0
-        self.green_apples = 0
+        self.red_apples_to = 0
+        self.red_apples_nho = 0
+        self.green_apples_to = 0
+        self.green_apples_nho = 0
         self.rotten_apples = 0
         # self.xu_li_tin_hieu_arduino()
         # self.test()
-
-    # def test(self):
-    #     self.thread[2] = ThreadClass(index=1)
-    #     self.thread[2].start()
-    #     x = self.thread[2].signal
-    #     print(x)
 
     # chup man hinh
     def capture_image(self):
         # xu ly
         img = self.thread[1].img
+        cv2.imwrite('taodo.jpg', img)
         detections = model.pre_process(img)
         self.dongco_doto = False
+        self.dongco_donho = False
         self.dongco_xanhto = False
+        self.dongco_xanhnho = False
         self.dongco_taohong = False
         result_img, red_apples, green_apples, rotten_apples, kich_thuoc = model.post_process(img.copy(), detections)
         if red_apples != 0:
-            self.dongco_doto = True
+            result_img, size = phan_loai_to_nho(result_img.copy(), 1)
+            if size == "to":
+                self.dongco_doto = True
+                self.red_apples_to += 1
+            elif size == "nho":
+                self.dongco_donho = True
+                self.red_apples_nho += 1
         elif green_apples != 0:
-            self.dongco_xanhto = True
+            result_img, size = phan_loai_to_nho(result_img.copy(), 0)
+            if size == "to":
+                self.dongco_xanhto = True
+                self.green_apples_to += 1
+            elif size == "nho":
+                self.dongco_xanhnho = True
+                self.green_apples_nho += 1
         elif rotten_apples != 0:
             self.dongco_taohong = True
         self.truyenketquaxuly()
         # so luong
-        self.red_apples += red_apples
-        self.green_apples += green_apples
+        # self.red_apples += red_apples
+        # self.green_apples += green_apples
         self.rotten_apples += rotten_apples
         self.update_text_result()
-        # detect kich thuoc
-
         # ve len man hinh 2
         qt_img = self.convert_cv_qt(result_img)
         self.label_result.setPixmap(qt_img)
@@ -319,6 +329,7 @@ class Ui_MainWindow(object):
         self.start_program = True
         self.pushButton.setEnabled(False)
         self.pushButton_2.setEnabled(True)
+        self.pushButton_3.setEnabled(True)
         Arduino.write("start".encode())
         self.xu_li_tin_hieu_arduino()
 
@@ -328,10 +339,14 @@ class Ui_MainWindow(object):
         self.pushButton.setEnabled(True)
 
     def reset_machine(self):
-        self.red_apples = 0
-        self.green_apples = 0
+        self.red_apples_to = 0
+        self.red_apples_nho = 0
+        self.green_apples_to = 0
+        self.red_apples_nho = 0
         self.rotten_apples = 0
         Arduino.write("stop".encode())
+        self.pushButton_3.setEnabled(False)
+        self.pushButton.setEnabled(True)
 
     def xu_li_tin_hieu_arduino(self):
         self.thread[2] = ThreadClass(index=1)
@@ -342,9 +357,15 @@ class Ui_MainWindow(object):
         if self.dongco_doto:  # gui tin hieu tao do to
             Arduino.write("taodoto".encode())
             self.dongco_doto = False
+        elif self.dongco_donho: # gui tin hieu tao xanh to
+            Arduino.write("taodonho".encode())
+            self.dongco_donho = False
         elif self.dongco_xanhto:  # gui tin hieu tao xanh to
             Arduino.write("taoxanhto".encode())
             self.dongco_xanhto = False
+        elif self.dongco_xanhnho: # gui tin hieu tao xanh nho
+            Arduino.write("taoxanhnho".encode())
+            self.dongco_xanhnho = False
         elif self.dongco_taohong:  # gui tin hieu tao hong
             Arduino.write("taohong".encode())
             self.dongco_taohong = False
@@ -359,8 +380,10 @@ class Ui_MainWindow(object):
 
     # update ket qua
     def update_text_result(self):
-        self.label_count1.setText(str(self.red_apples))
-        self.label_count3.setText(str(self.green_apples))
+        self.label_count1.setText(str(self.red_apples_to))
+        self.label_count2.setText(str(self.red_apples_nho))
+        self.label_count3.setText(str(self.green_apples_to))
+        self.label_count4.setText(str(self.green_apples_nho))
         self.label_count5.setText(str(self.rotten_apples))
 
     def closeEvent(self, event):
@@ -388,8 +411,8 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.label_title1.setText(_translate("MainWindow", "Đại học Bách Khoa Hà Nội"))
-        self.label_title2.setText(_translate("MainWindow", "Đồ án tốt nghiệp"))
-        self.label_title3.setText(_translate("MainWindow", "Đề tài: "))
+        self.label_title2.setText(_translate("MainWindow", "Đồ án tốt nghiệp kỹ sư Cơ điện tử"))
+        self.label_title3.setText(_translate("MainWindow", "Đề tài: Băng tải phân loại quả táo ứng dụng mạng YOLO"))
         self.groupBox_control.setTitle(_translate("MainWindow", "Bảng điều khiển"))
         self.pushButton.setText(_translate("MainWindow", "START"))
         self.pushButton_2.setText(_translate("MainWindow", "STOP"))
@@ -405,7 +428,7 @@ class Ui_MainWindow(object):
         self.label_count4.setText(_translate("MainWindow", "0"))
         self.label_result5.setText(_translate("MainWindow", "Táo hỏng:"))
         self.label_count5.setText(_translate("MainWindow", "0"))
-        self.groupBox_cam_result.setTitle(_translate("MainWindow", "Kết quả detect"))
+        self.groupBox_cam_result.setTitle(_translate("MainWindow", "Kết quả nhận diện"))
         self.groupBox_cam.setTitle(_translate("MainWindow", "Camera"))
 
 
@@ -441,19 +464,14 @@ class ThreadClass(QThread):
         self.index = index
 
     def run(self):
-        print('Starting thread...', self.index)
+        # print('Starting thread...', self.index)
         x = 0
         while True:
-            # if Arduino.inWaiting() > 0:
-            #     myData = Arduino.readline().decode()
-            #     time.sleep(1)
-            #     x = int(myData[0])
-            # self.signal.emit(x)
             if Arduino.inWaiting() > 0:
+                time.sleep(1)
                 myData = Arduino.readline().decode()
                 myData.split("\\", 2)
-                print(myData)
-                time.sleep(1)
+                print('data:', myData)
                 x = int(myData[0])
             self.signal.emit(x)
 
@@ -466,7 +484,7 @@ if __name__ == "__main__":
     import sys
 
     # load model
-    model = Model("weights/best.onnx")
+    model = Model("weights/last.onnx")
 
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()

@@ -273,6 +273,7 @@ class Ui_MainWindow(object):
         self.thread[1].change_pixmap_signal.connect(self.update_image)
         # start the thread
         self.thread[1].start()
+        self.xu_li_tin_hieu_arduino()
         # nut an chup man hinh
         self.pushButton.clicked.connect(self.start_machine)
         self.pushButton_2.clicked.connect(self.stop_machine)
@@ -289,8 +290,8 @@ class Ui_MainWindow(object):
     def capture_image(self):
         # xu ly
         img = self.thread[1].img
-        cv2.imwrite('taodo.jpg', img)
         detections = model.pre_process(img)
+        cv2.imwrite('taodo.jpg', img)
         self.dongco_doto = False
         self.dongco_donho = False
         self.dongco_xanhto = False
@@ -315,12 +316,10 @@ class Ui_MainWindow(object):
                 self.green_apples_nho += 1
         elif rotten_apples != 0:
             self.dongco_taohong = True
+            self.rotten_apples += rotten_apples
         self.truyenketquaxuly()
-        # so luong
-        # self.red_apples += red_apples
-        # self.green_apples += green_apples
-        self.rotten_apples += rotten_apples
         self.update_text_result()
+        
         # ve len man hinh 2
         qt_img = self.convert_cv_qt(result_img)
         self.label_result.setPixmap(qt_img)
@@ -331,7 +330,6 @@ class Ui_MainWindow(object):
         self.pushButton_2.setEnabled(True)
         self.pushButton_3.setEnabled(True)
         Arduino.write("start".encode())
-        self.xu_li_tin_hieu_arduino()
 
     def stop_machine(self):
         Arduino.write("stop".encode())
@@ -342,9 +340,10 @@ class Ui_MainWindow(object):
         self.red_apples_to = 0
         self.red_apples_nho = 0
         self.green_apples_to = 0
-        self.red_apples_nho = 0
+        self.green_apples_nho = 0
         self.rotten_apples = 0
-        Arduino.write("stop".encode())
+        self.update_text_result()
+        Arduino.write("reset".encode())
         self.pushButton_3.setEnabled(False)
         self.pushButton.setEnabled(True)
 
@@ -467,12 +466,15 @@ class ThreadClass(QThread):
         # print('Starting thread...', self.index)
         x = 0
         while True:
-            if Arduino.inWaiting() > 0:
-                time.sleep(1)
-                myData = Arduino.readline().decode()
-                myData.split("\\", 2)
-                print('data:', myData)
-                x = int(myData[0])
+            try:
+                if Arduino.inWaiting() > 0:
+                    time.sleep(1)
+                    myData = Arduino.readline().decode()
+                    myData.split("\\", 2)
+                    print('data:', myData)
+                    x = int(myData[0])
+            except:
+                pass
             self.signal.emit(x)
 
     def stop(self):

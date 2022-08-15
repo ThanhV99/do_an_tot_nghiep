@@ -24,9 +24,10 @@ def phan_loai_to_nho(input_image, color):
         result = cv2.inRange(hsv, np.array([36,0,0]), np.array([66,200, 200]))
 
     kernel = np.ones((5, 5), np.uint8)
-    closing = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=2)
+    opening = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel, iterations=3)
+    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=3)
     canny = cv2.Canny(closing.copy(), 100, 200)
-    contours, hierarchy = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     areas = [cv2.contourArea(c) for c in contours]
     max_index = np.argmax(areas)
